@@ -201,7 +201,11 @@ pduParser.decode7Bit = function(code, length, unPadding) {
 
     var ascii = '';
     var esc = false; //last character was a ESC
+	if (length === undefined)
+		length = bin.length;
     for(var i=0; i<length; i++){
+		if (bin[i].length < 7)
+			continue;
         var codeNum = parseInt(bin[i], 2);
         if (codeNum == 0x1B){
             esc = true;
