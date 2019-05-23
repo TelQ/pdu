@@ -5,14 +5,19 @@ var sevenBitEsc = new Array('', '', '', '', '', '', '', '', '', '', '', '', '', 
     '', '|', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '€', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '');
 
 pduParser.parse = function(pdu) {
+    pduParser.parse(pdu, false);
+}
+
+pduParser.parse = function(pdu, includeOriginalHexValues) {
     //Cursor points to the last octet we've read.
     var cursor = 0;
 
     var buffer = new Buffer(pdu.slice(0,4), 'hex');
     var smscSize = buffer[0];
-    var smscType = buffer[1].toString(16);
+    var smscType = buffer[1].toString(16);;
     cursor = (smscSize*2+2);
-    var smscNum  = pduParser.deSwapNibbles(pdu.slice(4, cursor));
+    var smscNumHex = pdu.slice(4, cursor);
+    var smscNum  = pduParser.deSwapNibbles(smscNumHex);
 
     var buffer = new Buffer(pdu.slice(cursor,cursor+6), 'hex');
     cursor += 6;
@@ -27,8 +32,14 @@ pduParser.parse = function(pdu) {
 
     var senderType = parseInt(buffer[2]).toString(16)
 
-
-    var senderNum = pduParser.deSwapNibbles(pdu.slice(cursor, cursor+senderSize));
+    var senderHex = pdu.slice(cursor, cursor+senderSize);
+    var sender;
+    if (senderType.toLocaleLowerCase().charAt(0) == 'd'){
+        sender = pduParser.decode7Bit(senderHex, senderHex.length);
+    }
+    else{
+        sender = pduParser.deSwapNibbles(senderHex);
+    }
     cursor += senderSize;
 
     var protocolIdentifier = pdu.slice(cursor, cursor+2);
@@ -39,8 +50,8 @@ pduParser.parse = function(pdu) {
 
     var encoding = pduParser.detectEncoding(dataCodingScheme);
 
-    var timestamp = pduParser.deSwapNibbles(pdu.slice(cursor, cursor+14));
-
+    var timestampHex = pdu.slice(cursor, cursor+14)
+    var timestamp = pduParser.deSwapNibbles(timestampHex);
 
     var time = new Date;
     time.setUTCFullYear('20'+timestamp.slice(0,2));
@@ -62,9 +73,10 @@ pduParser.parse = function(pdu) {
 
     var dataLength = parseInt(pdu.slice(cursor, cursor+2), 16).toString(10);
     cursor += 2;
-
+    var udhHex = '';
     if(udhi) { //User-Data-Header-Indicator: means there's some User-Data-Header.
-        var udhLength = pdu.slice(cursor, cursor+2);
+        var udhLength = parseInt(pdu.slice(cursor, cursor+2), 16);
+        udhHex = pdu.slice(cursor, cursor+(udhLength*2)+2);
         var iei = pdu.slice(cursor+2, cursor+4);
         if(iei == "00") { //Concatenated sms.
             var headerLength = pdu.slice(cursor+4, cursor+6);
@@ -88,6 +100,8 @@ pduParser.parse = function(pdu) {
             cursor += (udhLength-2)*2;
     }
 
+    var textHex = pdu.slice(cursor);
+
     if(encoding === '16bit')
         var text = pduParser.decode16Bit(pdu.slice(cursor), dataLength);
     else if(encoding === '7bit')
@@ -100,18 +114,29 @@ pduParser.parse = function(pdu) {
     var data = {
         'smsc' : smscNum,
         'smsc_type' : smscType,
-        'sender' : senderNum,
+        'sender' : sender,
         'sender_type' : senderType,
+        'protocol_identifier': protocolIdentifier,
         'encoding' : encoding,
         'time' : time,
         'text' : text
     };
+
+    if(includeOriginalHexValues){
+        data['smsc_hex'] = smscNumHex;
+        data['sender_hex'] = senderHex,
+        data['encoding_hex'] = dataCodingScheme;
+        data['time_hex'] = timestampHex;
+        data['text_hex'] = textHex;
+    }
 
     if(udhi) {
         data['udh'] = {
             'length' : udhLength,
             'iei' : iei,
         };
+
+        data['udh_hex'] = udhHex;
 
         if(iei == '00' || iei == '08') {
             data['udh']['reference_number'] = referenceNumber;
