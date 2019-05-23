@@ -14,7 +14,7 @@ pduParser.parse = function(pdu, includeOriginalHexValues) {
 
     var buffer = new Buffer(pdu.slice(0,4), 'hex');
     var smscSize = buffer[0];
-    var smscType = buffer[1].toString(16);;
+    var smscType = buffer[1].toString(16);
     cursor = (smscSize*2+2);
     var smscNumHex = pdu.slice(4, cursor);
     var smscNum  = pduParser.deSwapNibbles(smscNumHex);
@@ -139,6 +139,7 @@ pduParser.parse = function(pdu, includeOriginalHexValues) {
         data['udh_hex'] = udhHex;
 
         if(iei == '00' || iei == '08') {
+            data['udh']['header_length'] = headerLength;
             data['udh']['reference_number'] = referenceNumber;
             data['udh']['parts'] = parseInt(parts);
             data['udh']['current_part'] = parseInt(currentPart);
