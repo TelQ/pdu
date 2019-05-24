@@ -34,7 +34,8 @@ pduParser.parse = function(pdu, includeOriginalHexValues) {
 
     var senderHex = pdu.slice(cursor, cursor+senderSize);
     var sender;
-    if (senderType.toLocaleLowerCase().charAt(0) == 'd'){
+    //If sender is alphanumeric, decode. 
+    if (senderType.toUpperCase().charAt(0) == 'D'){
         sender = pduParser.decode7Bit(senderHex, senderHex.length);
     }
     else{
