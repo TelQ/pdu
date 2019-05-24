@@ -14,7 +14,7 @@ pduParser.parse = function(pdu, includeOriginalHexValues) {
 
     var buffer = new Buffer(pdu.slice(0,4), 'hex');
     var smscSize = buffer[0];
-    var smscType = buffer[1].toString(16);
+    var smscType = buffer[1].toString(16).toUpperCase();
     cursor = (smscSize*2+2);
     var smscNumHex = pdu.slice(4, cursor);
     var smscNum  = pduParser.deSwapNibbles(smscNumHex);
@@ -30,12 +30,12 @@ pduParser.parse = function(pdu, includeOriginalHexValues) {
     if(senderSize % 2 === 1)
         senderSize++;
 
-    var senderType = parseInt(buffer[2]).toString(16)
+    var senderType = parseInt(buffer[2]).toString(16).toUpperCase();
 
     var senderHex = pdu.slice(cursor, cursor+senderSize);
     var sender;
     //If sender is alphanumeric, decode. 
-    if (senderType.toUpperCase().charAt(0) == 'D'){
+    if (senderType.charAt(0) == 'D'){
         sender = pduParser.decode7Bit(senderHex, senderHex.length);
     }
     else{
